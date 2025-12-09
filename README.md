@@ -5,7 +5,7 @@ Official Python SDK for OOMOL Fusion API. Simple and intuitive interface for int
 [![Python Version](https://img.shields.io/pypi/pyversions/oomol-fusion-sdk)](https://pypi.org/project/oomol-fusion-sdk/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[简体中文](README_ZH.md) | English
+[简体中文](README_zh-CN.md) | English
 
 ## Features
 

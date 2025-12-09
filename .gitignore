@@ -59,6 +59,7 @@ venv.bak/
 *.swo
 *~
 .DS_Store
+.claude/
 
 # mypy
 .mypy_cache/
