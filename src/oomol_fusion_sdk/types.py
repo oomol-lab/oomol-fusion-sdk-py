@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Literal, Optional, TypedDict
+from pathlib import Path
+from typing import Any, BinaryIO, Callable, Dict, Literal, Optional, TypedDict, Union
 
 
 class TaskState(str, Enum):
@@ -17,6 +18,30 @@ class TaskState(str, Enum):
 
 # Type alias for progress callback
 ProgressCallback = Callable[[float], None]
+
+
+@dataclass
+class UploadProgress:
+    """Progress information for file upload.
+
+    Attributes:
+        uploaded_bytes: Number of bytes uploaded
+        total_bytes: Total number of bytes to upload
+        percentage: Upload percentage (0-100)
+        uploaded_chunks: Number of chunks uploaded (for multipart upload)
+        total_chunks: Total number of chunks (for multipart upload)
+    """
+
+    uploaded_bytes: int
+    total_bytes: int
+    percentage: float
+    uploaded_chunks: int = 0
+    total_chunks: int = 0
+
+
+# Type alias for upload progress callback
+# Can receive either a simple percentage or detailed UploadProgress object
+UploadProgressCallback = Callable[[Union[UploadProgress, float]], None]
 
 
 class SubmitTaskRequest(TypedDict):
@@ -102,14 +127,34 @@ class OomolFusionSDKOptions:
     timeout: float = 300.0
 
 
+@dataclass
+class UploadOptions:
+    """Options for file upload.
+
+    Attributes:
+        on_progress: Optional callback function to receive upload progress updates
+        max_concurrent_uploads: Maximum number of concurrent chunk uploads for multipart upload (default: 3)
+        multipart_threshold: File size threshold in bytes for switching to multipart upload (default: 5MB)
+        retries: Number of retry attempts on upload failure (default: 3)
+    """
+
+    on_progress: Optional[UploadProgressCallback] = None
+    max_concurrent_uploads: int = 3
+    multipart_threshold: int = 5 * 1024 * 1024  # 5MB
+    retries: int = 3
+
+
 # Export all public types
 __all__ = [
     "TaskState",
     "ProgressCallback",
+    "UploadProgress",
+    "UploadProgressCallback",
     "SubmitTaskRequest",
     "SubmitTaskResponse",
     "TaskResultResponse",
     "TaskResult",
     "RunOptions",
     "OomolFusionSDKOptions",
+    "UploadOptions",
 ]

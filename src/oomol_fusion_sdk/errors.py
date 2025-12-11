@@ -152,6 +152,55 @@ class NetworkError(OomolFusionError):
         self.original_error = original_error
 
 
+class FileUploadError(OomolFusionError):
+    """Exception raised when file upload fails.
+
+    Attributes:
+        message: The error message
+        file_name: The name of the file that failed to upload
+        original_error: The underlying exception that caused the upload error
+    """
+
+    def __init__(
+        self,
+        message: str,
+        file_name: Optional[str] = None,
+        original_error: Optional[Exception] = None,
+    ) -> None:
+        """Initialize the file upload error.
+
+        Args:
+            message: The error message
+            file_name: The name of the file that failed to upload
+            original_error: The underlying exception that caused the upload error
+        """
+        super().__init__(message)
+        self.file_name = file_name
+        self.original_error = original_error
+
+
+class FileTooLargeError(OomolFusionError):
+    """Exception raised when file size exceeds the maximum allowed size.
+
+    Attributes:
+        message: The error message
+        file_size: The size of the file in bytes
+        max_size: The maximum allowed file size in bytes
+    """
+
+    def __init__(self, message: str, file_size: int, max_size: int) -> None:
+        """Initialize the file too large error.
+
+        Args:
+            message: The error message
+            file_size: The size of the file in bytes
+            max_size: The maximum allowed file size in bytes
+        """
+        super().__init__(message)
+        self.file_size = file_size
+        self.max_size = max_size
+
+
 # Export all error classes
 __all__ = [
     "OomolFusionError",
@@ -160,4 +209,6 @@ __all__ = [
     "TaskCancelledError",
     "TaskFailedError",
     "NetworkError",
+    "FileUploadError",
+    "FileTooLargeError",
 ]

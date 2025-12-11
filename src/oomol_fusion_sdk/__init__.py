@@ -13,13 +13,15 @@ Example:
     >>> print(result.data)
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 # Import main client
 from .client import OomolFusionSDK
 
 # Import all error classes
 from .errors import (
+    FileUploadError,
+    FileTooLargeError,
     NetworkError,
     OomolFusionError,
     TaskCancelledError,
@@ -38,6 +40,9 @@ from .types import (
     TaskResult,
     TaskResultResponse,
     TaskState,
+    UploadOptions,
+    UploadProgress,
+    UploadProgressCallback,
 )
 
 # Import utility functions
@@ -50,12 +55,15 @@ __all__ = [
     # Types
     "TaskState",
     "ProgressCallback",
+    "UploadProgress",
+    "UploadProgressCallback",
     "SubmitTaskRequest",
     "SubmitTaskResponse",
     "TaskResultResponse",
     "TaskResult",
     "RunOptions",
     "OomolFusionSDKOptions",
+    "UploadOptions",
     # Errors
     "OomolFusionError",
     "TaskSubmitError",
@@ -63,6 +71,8 @@ __all__ = [
     "TaskCancelledError",
     "TaskFailedError",
     "NetworkError",
+    "FileUploadError",
+    "FileTooLargeError",
     # Utils
     "detect_environment",
     "is_requests_available",

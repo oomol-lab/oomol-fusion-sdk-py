@@ -13,6 +13,7 @@ Official Python SDK for OOMOL Fusion API. Simple and intuitive interface for int
 - ✅ **Type Safe** - Full type hints support
 - ✅ **Auto Polling** - Automatic task status polling
 - ✅ **Progress Tracking** - Real-time task execution progress
+- ✅ **File Upload** - Upload files to OOMOL cloud storage with multipart support
 - ✅ **Error Handling** - Comprehensive error class hierarchy
 - ✅ **Flexible Usage** - Multiple usage patterns supported
 - ✅ **Context Manager** - Support `with` statement for automatic resource management
@@ -178,6 +179,64 @@ if status["state"] == TaskState.COMPLETED:
     print(f"Result: {status['data']}")
 ```
 
+### File Upload
+
+Upload files to OOMOL cloud storage with automatic multipart upload for large files:
+
+```python
+from pathlib import Path
+from oomol_fusion_sdk import OomolFusionSDK, UploadOptions, UploadProgress
+
+sdk = OomolFusionSDK(token="your-api-token")
+
+# Basic upload
+download_url = sdk.upload_file(file_bytes, "document.pdf")
+print(f"File uploaded: {download_url}")
+
+# Upload with progress tracking
+def on_progress(progress):
+    if isinstance(progress, UploadProgress):
+        # Multipart upload - detailed progress
+        print(f"Progress: {progress.percentage:.1f}% "
+              f"({progress.uploaded_chunks}/{progress.total_chunks} chunks)")
+    else:
+        # Single file upload - simple percentage
+        print(f"Progress: {progress}%")
+
+options = UploadOptions(on_progress=on_progress)
+download_url = sdk.upload_file(file_bytes, "video.mp4", options)
+
+# Upload from file path
+download_url = sdk.upload_file(Path("./image.png"), "image.png")
+
+# Upload from file handle
+with open("data.csv", "rb") as f:
+    download_url = sdk.upload_file(f, "data.csv")
+
+# Custom options
+options = UploadOptions(
+    max_concurrent_uploads=5,           # Concurrent chunk uploads
+    multipart_threshold=10*1024*1024,   # 10MB threshold
+    retries=3                            # Retry attempts
+)
+download_url = sdk.upload_file(large_file, "large.zip", options)
+```
+
+**Supported file types:**
+
+- Images: `png`, `jpg`, `jpeg`, `gif`, `webp`
+- Audio/Video: `mp3`, `mp4`
+- Documents: `txt`, `md`, `pdf`, `epub`, `docx`, `xlsx`, `pptx`
+- Data: `csv`, `json`, `zip`
+
+**Features:**
+
+- 🎯 Smart upload strategy (< 5MB: single file, ≥ 5MB: multipart)
+- 📊 Real-time progress tracking
+- 🚀 Concurrent chunk uploads (default: 3)
+- 🔄 Automatic retry on failure (default: 3 times)
+- 📦 Maximum file size: 500MB
+
 ## API Reference
 
 ### OomolFusionSDK
@@ -194,6 +253,7 @@ OomolFusionSDK(
 ```
 
 **Parameters:**
+
 - `token` (str): OOMOL API authentication token **(required)**
 - `base_url` (str): API base URL, default: `https://fusion-api.oomol.com/v1`
 - `polling_interval` (float): Status polling interval (seconds), default: `2.0`
@@ -206,6 +266,7 @@ OomolFusionSDK(
 Submit task and wait for completion (recommended).
 
 **Parameters:**
+
 - `request` (SubmitTaskRequest): Dictionary containing `service` and `inputs`
 - `options` (RunOptions, optional): Run options, including `on_progress` callback
 
@@ -223,6 +284,7 @@ Submit task and wait for completion (recommended).
 Submit task only, without waiting for completion.
 
 **Parameters:**
+
 - `request` (SubmitTaskRequest): Dictionary containing `service` and `inputs`
 
 **Returns:** `SubmitTaskResponse` - Contains `sessionID` and `success`
@@ -232,6 +294,7 @@ Submit task only, without waiting for completion.
 Wait for specific task to complete.
 
 **Parameters:**
+
 - `service` (str): Service name
 - `session_id` (str): Task session ID
 - `options` (RunOptions, optional): Run options
@@ -243,10 +306,32 @@ Wait for specific task to complete.
 Get current task status (without waiting).
 
 **Parameters:**
+
 - `service` (str): Service name
 - `session_id` (str): Task session ID
 
 **Returns:** `TaskResultResponse` - Contains `state`, `data`, `error`, `progress`
+
+##### `upload_file(file, file_name, options=None)`
+
+Upload a file to OOMOL cloud storage.
+
+**Parameters:**
+
+- `file` (Union[bytes, BinaryIO, Path]): The file to upload
+  - `bytes`: Raw file content
+  - `BinaryIO`: File-like object (e.g., from `open()`)
+  - `Path`: pathlib.Path object
+- `file_name` (str): The name of the file (must include extension)
+- `options` (UploadOptions, optional): Upload options
+
+**Returns:** `str` - The download URL of the uploaded file
+
+**Raises:**
+
+- `FileUploadError`: Upload failed or unsupported file type
+- `FileTooLargeError`: File exceeds maximum size (500MB)
+- `NetworkError`: Network communication failed
 
 ##### `close()`
 
@@ -264,6 +349,8 @@ from oomol_fusion_sdk import (
     TaskTimeoutError,
     TaskFailedError,
     NetworkError,
+    FileUploadError,
+    FileTooLargeError,
 )
 
 sdk = OomolFusionSDK(token="your-api-token")
@@ -282,6 +369,11 @@ except TaskTimeoutError as e:
 except TaskFailedError as e:
     print(f"Task failed: {e.state}")
     print(f"Error details: {e.error_details}")
+except FileUploadError as e:
+    print(f"Upload failed: {e.message}")
+    print(f"File name: {e.file_name}")
+except FileTooLargeError as e:
+    print(f"File too large: {e.file_size} bytes (max: {e.max_size})")
 except NetworkError as e:
     print(f"Network error: {e.message}")
 except OomolFusionError as e:
@@ -297,6 +389,8 @@ except OomolFusionError as e:
 | `TaskTimeoutError` | Task timeout | `message`, `session_id`, `service`, `timeout` |
 | `TaskFailedError` | Task execution failed | `message`, `session_id`, `service`, `state`, `error_details` |
 | `NetworkError` | Network communication error | `message`, `original_error` |
+| `FileUploadError` | File upload failed | `message`, `file_name`, `original_error` |
+| `FileTooLargeError` | File exceeds maximum size | `message`, `file_size`, `max_size` |
 
 ## Type Definitions
 
@@ -312,6 +406,9 @@ from oomol_fusion_sdk import (
     RunOptions,
     ProgressCallback,
     OomolFusionSDKOptions,
+    UploadOptions,
+    UploadProgress,
+    UploadProgressCallback,
 )
 
 # Task state enum
@@ -321,6 +418,15 @@ class TaskState(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     ERROR = "error"
+
+# Upload progress tracking
+@dataclass
+class UploadProgress:
+    uploaded_bytes: int
+    total_bytes: int
+    percentage: float
+    uploaded_chunks: int
+    total_chunks: int
 ```
 
 ## Development
@@ -380,6 +486,34 @@ For questions or assistance, please:
 3. Contact support: support@oomol.com
 
 ## Changelog
+
+### 1.1.0 (2025-12-11)
+
+#### New Features ✨
+
+Added `upload_file()` method for uploading files to OOMOL cloud storage:
+
+- 🎯 **Smart Strategy**: Automatically chooses single-file or multipart upload
+  - Files < 5MB: Single-file upload
+  - Files ≥ 5MB: Multipart upload with concurrent chunks
+- 📊 **Real-time Progress**: Progress callbacks showing percentage and chunk progress
+- 🚀 **Concurrent Upload**: Multipart upload supports concurrency (default: 3)
+- 🔄 **Auto Retry**: Automatic retry on failure (default: 3 times)
+- 📦 **File Types**: Supports 17 file types with automatic Content-Type mapping
+- 🛡️ **Error Handling**: Comprehensive error handling
+
+**Supported File Types**: png, jpg, jpeg, gif, webp, mp3, mp4, txt, md, pdf, epub, docx, xlsx, pptx, csv, json, zip
+
+#### New Types 📝
+
+- `UploadOptions`: Upload configuration options
+- `UploadProgress`: Detailed upload progress information
+- `UploadProgressCallback`: Progress callback type
+
+#### New Error Classes 🚨
+
+- `FileUploadError`: File upload failed
+- `FileTooLargeError`: File size exceeds limit (max 500MB)
 
 ### 1.0.0 (2024-12-09)
 

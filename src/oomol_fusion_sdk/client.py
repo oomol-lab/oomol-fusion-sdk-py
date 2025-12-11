@@ -1,7 +1,8 @@
 """Core client implementation for OOMOL Fusion SDK."""
 
 import time
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, BinaryIO, Dict, Optional, Union
 from urllib.parse import urljoin
 
 import requests
@@ -21,7 +22,9 @@ from .types import (
     TaskResult,
     TaskResultResponse,
     TaskState,
+    UploadOptions,
 )
+from .uploader import FileUploader
 from .utils import validate_environment
 
 
@@ -66,6 +69,9 @@ class OomolFusionSDK:
         # Create session for connection pooling
         self._session = requests.Session()
         self._session.headers.update({"Authorization": f"Bearer {self._options.token}"})
+
+        # Create file uploader
+        self._uploader = FileUploader(self._options.base_url, self._options.token, self._session)
 
     def __enter__(self) -> "OomolFusionSDK":
         """Context manager entry."""
@@ -309,6 +315,66 @@ class OomolFusionSDK:
             >>> sdk.cancel(session_id)
         """
         self._cancelled_sessions[session_id] = True
+
+    def upload_file(
+        self,
+        file: Union[bytes, BinaryIO, Path],
+        file_name: str,
+        options: Optional[UploadOptions] = None,
+    ) -> str:
+        """Upload a file to OOMOL cloud storage.
+
+        This method automatically chooses between single-file upload and multipart upload
+        based on file size. Files smaller than the multipart threshold (default 5MB) use
+        single-file upload, while larger files use multipart upload with concurrent chunk uploads.
+
+        Args:
+            file: The file to upload. Can be:
+                - bytes: Raw file content
+                - BinaryIO: File-like object (e.g., from open())
+                - Path: pathlib.Path object
+            file_name: The name of the file (must include extension).
+                Supported types: png, jpg, jpeg, gif, webp, mp3, mp4, txt, md,
+                pdf, epub, docx, xlsx, pptx, csv, json, zip
+            options: Optional upload options:
+                - on_progress: Callback for upload progress updates
+                - max_concurrent_uploads: Number of concurrent chunks (default: 3)
+                - multipart_threshold: Size threshold for multipart upload (default: 5MB)
+                - retries: Number of retry attempts (default: 3)
+
+        Returns:
+            The download URL of the uploaded file
+
+        Raises:
+            FileUploadError: If upload fails or file type is not supported
+            FileTooLargeError: If file exceeds maximum size (500MB)
+            NetworkError: If network communication fails
+
+        Examples:
+            Basic upload:
+            >>> url = sdk.upload_file(file_bytes, "document.pdf")
+
+            Upload with progress tracking:
+            >>> def on_progress(progress):
+            ...     if isinstance(progress, float):
+            ...         print(f"Progress: {progress}%")
+            ...     else:
+            ...         print(f"Uploaded {progress.uploaded_chunks}/{progress.total_chunks} chunks")
+            >>> url = sdk.upload_file(
+            ...     file_bytes,
+            ...     "video.mp4",
+            ...     options=UploadOptions(on_progress=on_progress)
+            ... )
+
+            Upload from file path:
+            >>> from pathlib import Path
+            >>> url = sdk.upload_file(Path("./image.png"), "image.png")
+
+            Upload from file handle:
+            >>> with open("data.csv", "rb") as f:
+            ...     url = sdk.upload_file(f, "data.csv")
+        """
+        return self._uploader.upload_file(file, file_name, options)
 
 
 # Export the main class
