@@ -1,0 +1,11 @@
+include README.md
+include README.zh-CN.md
+include LICENSE
+include CHANGELOG.md
+include pyproject.toml
+include PUBLISH.md
+graft src/oomol_fusion_sdk
+prune tests
+prune examples
+global-exclude __pycache__
+global-exclude *.py[co]
